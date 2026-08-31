@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pricing · Admin · AI FITNESS COACH</title>
+<script src="../js/theme.js"></script>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+<link href="../css/style.css" rel="stylesheet"><link href="../css/admin.css" rel="stylesheet">
+<link href="../css/animations.css" rel="stylesheet"><link href="../css/responsive.css" rel="stylesheet">
+</head>
+<body>
+<div class="admin-shell"><aside id="sidebarMount"></aside>
+<div class="admin-body"><header id="headerMount"></header><main class="admin-main" id="mainContent">
+  <div class="admin-toolbar">
+    <input type="text" class="form-control search-box" id="searchInput" placeholder="Search plans...">
+    <button class="btn btn-fire" id="addBtn"><i class="bi bi-plus-lg me-1"></i>Add Plan</button>
+  </div>
+  <div class="tile admin-table-card" id="tableWrap"></div>
+</main></div></div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="../js/firebase-config.js"></script><script src="../js/utils.js"></script>
+<script src="../js/firebase-auth.js"></script><script src="../js/firebase-db.js"></script>
+<script src="../js/firebase-storage.js"></script><script src="../js/app.js"></script>
+<script src="../js/admin-auth.js"></script><script src="../js/admin.js"></script>
+<script>
+(async function () {
+  try { await requireAdmin(); } catch (e) { return; }
+  afcMountLayout("pricing", { admin: true });
+
+  var allData = {};
+
+  function pricingFields(p) {
+    p = p || {};
+    var featStr = Array.isArray(p.features) ? p.features.join("\n") : (p.features || "");
+    return [
+      { key: "name", label: "Name", type: "text", value: p.name || "" },
+      { key: "price", label: "Price ($)", type: "number", value: p.price || 0, step: 0.01, min: 0 },
+      { key: "durationDays", label: "Duration (days)", type: "number", value: p.durationDays || 30, min: 1 },
+      { key: "features", label: "Features (one per line)", textarea: true, rows: 5, value: featStr },
+      { key: "featured", label: "Featured", type: "select", options: [{ value: "no", label: "No" }, { value: "yes", label: "Yes" }], value: p.featured ? "yes" : "no" }
+    ];
+  }
+
+  function renderTable() {
+    var html = afcAdminTable({
+      columns: [
+        { key: "name", label: "Name" },
+        { key: "_price", label: "Price", render: function (row) {
+          return '<span class="fw-bold text-primary">$' + (Number(row.price) || 0).toFixed(2) + '</span>';
+        }},
+        { key: "durationDays", label: "Days" },
+        { key: "_featured", label: "Featured", render: function (row) {
+          return row.featured ? '<span class="badge bg-warning text-dark">Star</span>' : "";
+        }},
+        { key: "_active", label: "Active", render: function (row) {
+          return row.active !== false ? '<span class="badge bg-success">Yes</span>' : '<span class="badge bg-secondary">No</span>';
+        }}
+      ],
+      rows: allData,
+      actions: [
+        { icon: "pencil-square", title: "EDIT", cls: "btn-outline-warning" },
+        { icon: "power", title: "TOGGLE_ACTIVE", cls: "btn-outline-secondary" },
+        { icon: "trash3-fill", title: "DELETE", cls: "btn-outline-danger" }
+      ]
+    });
+    document.getElementById("tableWrap").innerHTML = html;
+    afcAdminSearchFilter("#searchInput", "#tableWrap tr[data-key]");
+  }
+
+  afcLoader("Loading pricing...");
+  try {
+    await afcDbOnValue("pricing", function (data) {
+      allData = data || {};
+      renderTable();
+      afcLoaderOff();
+    });
+  } catch (err) { afcToast("Failed to load pricing.", "error"); afcLoaderOff(); }
+
+  document.getElementById("addBtn").addEventListener("click", async function () {
+    var data = await afcFormModal({ title: "Add Pricing Plan", fields: pricingFields(), okText: "Save" });
+    if (!data) return;
+    var slug = afcSlugify(data.name);
+    if (!slug) { afcToast("Enter a valid name.", "error"); return; }
+    var features = data.features.split("\n").map(function (s) { return s.trim(); }).filter(Boolean);
+    afcLoader("Saving...");
+    try {
+      await afcDbSet("pricing/" + slug, {
+        name: data.name, price: Number(data.price) || 0, durationDays: Number(data.durationDays) || 30,
+        features: features, featured: data.featured === "yes", active: true
+      });
+      afcToast("Plan saved.", "success");
+    } catch (err) { afcToast("Failed to save.", "error"); }
+    afcLoaderOff();
+  });
+
+  afcAdminBindActions(document.getElementById("tableWrap"), {
+    EDIT: async function (key) {
+      var p = allData[key]; if (!p) return;
+      var data = await afcFormModal({ title: "Edit Plan", fields: pricingFields(p), okText: "Save" });
+      if (!data) return;
+      var features = data.features.split("\n").map(function (s) { return s.trim(); }).filter(Boolean);
+      afcLoader("Saving...");
+      try {
+        await afcDbUpdate("pricing/" + key, {
+          name: data.name, price: Number(data.price) || 0, durationDays: Number(data.durationDays) || 30,
+          features: features, featured: data.featured === "yes"
+        });
+        afcToast("Plan updated.", "success");
+      } catch (err) { afcToast("Failed to update.", "error"); }
+      afcLoaderOff();
+    },
+    TOGGLE_ACTIVE: async function (key) {
+      afcLoader("Toggling...");
+      try {
+        var v = await afcToggleField("pricing/" + key, "active");
+        afcToast(v ? "Activated." : "Deactivated.", "success");
+      } catch (err) { afcToast("Failed.", "error"); }
+      afcLoaderOff();
+    },
+    DELETE: async function (key) {
+      var ok = await afcConfirmDelete("plan " + key);
+      if (!ok) return;
+      afcLoader("Deleting...");
+      try { await afcDbRemove("pricing/" + key); afcToast("Deleted.", "success"); }
+      catch (err) { afcToast("Failed to delete.", "error"); }
+      afcLoaderOff();
+    }
+  });
+})();
+</script>
+</body>
+</html>

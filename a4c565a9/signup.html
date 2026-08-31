@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Sign Up · AI FITNESS COACH</title>
+  <script src="js/theme.js"></script>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+  <link href="css/style.css" rel="stylesheet">
+  <link href="css/animations.css" rel="stylesheet">
+  <link href="css/responsive.css" rel="stylesheet">
+</head>
+<body>
+  <div class="auth-shell">
+    <div class="auth-card tile anim-scale">
+      <!-- Brand -->
+      <div class="auth-brand">
+        <div class="brand-badge"><i class="bi bi-heart-pulse-fill" aria-hidden="true"></i></div>
+        <h4 class="fw-bold mt-2 mb-0">AI FITNESS COACH</h4>
+      </div>
+
+      <h3 class="fw-bold text-center mb-4">CREATE ACCOUNT</h3>
+
+      <!-- Full Name -->
+      <div class="mb-3">
+        <label class="form-label" for="signupName">Full Name</label>
+        <div class="input-icon">
+          <i class="bi bi-person" aria-hidden="true"></i>
+          <input type="text" class="form-control" id="signupName" placeholder="Your full name" autocomplete="name" aria-label="Full name">
+        </div>
+      </div>
+
+      <!-- Email -->
+      <div class="mb-3">
+        <label class="form-label" for="signupEmail">Email</label>
+        <div class="input-icon">
+          <i class="bi bi-envelope" aria-hidden="true"></i>
+          <input type="email" class="form-control" id="signupEmail" placeholder="you@example.com" autocomplete="email" aria-label="Email address">
+        </div>
+      </div>
+
+      <!-- Password -->
+      <div class="mb-3">
+        <label class="form-label" for="signupPass">Password</label>
+        <div class="input-icon">
+          <i class="bi bi-lock" aria-hidden="true"></i>
+          <input type="password" class="form-control" id="signupPass" placeholder="At least 6 characters" autocomplete="new-password" aria-label="Password">
+        </div>
+      </div>
+
+      <!-- Confirm Password -->
+      <div class="mb-3">
+        <label class="form-label" for="signupConfirm">Confirm Password</label>
+        <div class="input-icon">
+          <i class="bi bi-lock-fill" aria-hidden="true"></i>
+          <input type="password" class="form-control" id="signupConfirm" placeholder="Re-enter password" autocomplete="new-password" aria-label="Confirm password">
+        </div>
+      </div>
+
+      <!-- Error area -->
+      <div class="invalid-feedback-2 mb-3" id="signupError" role="alert"></div>
+
+      <!-- Create Account button -->
+      <button class="btn btn-fire btn-block btn-lg-2 mb-3" id="signupBtn">CREATE ACCOUNT</button>
+
+      <!-- Divider -->
+      <div class="auth-divider">OR</div>
+
+      <!-- Google -->
+      <button class="btn btn-ghost btn-block mb-3" id="googleBtn"><i class="bi bi-google me-2"></i>CONTINUE WITH GOOGLE</button>
+
+      <!-- Link to login -->
+      <div class="text-center" style="font-size:.9rem">
+        Already have an account? <a href="login.html">LOG IN</a>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="js/firebase-config.js"></script>
+  <script src="js/utils.js"></script>
+  <script src="js/firebase-auth.js"></script>
+  <script src="js/firebase-db.js"></script>
+  <script src="js/firebase-storage.js"></script>
+  <script src="js/app.js"></script>
+  <script src="js/auth.js"></script>
+  <script>
+  (async function () {
+    try {
+      await window.afcFirebaseReady();
+    } catch (e) {
+      afcSetupBanner();
+      return;
+    }
+
+    var nameInput = qs("#signupName");
+    var emailInput = qs("#signupEmail");
+    var passInput = qs("#signupPass");
+    var confirmInput = qs("#signupConfirm");
+    var errEl = qs("#signupError");
+    var signupBtn = qs("#signupBtn");
+
+    if (signupBtn) {
+      signupBtn.addEventListener("click", async function () {
+        if (errEl) errEl.textContent = "";
+        var name = nameInput.value.trim();
+        var email = emailInput.value.trim();
+        var pass = passInput.value;
+        var confirm = confirmInput.value;
+
+        if (name.length < 2) {
+          if (errEl) errEl.textContent = "Name must be at least 2 characters.";
+          return;
+        }
+        if (!afcValidEmail(email)) {
+          if (errEl) errEl.textContent = "Please enter a valid email address.";
+          return;
+        }
+        if (!afcValidPassword(pass)) {
+          if (errEl) errEl.textContent = "Password must be at least 6 characters.";
+          return;
+        }
+        if (pass !== confirm) {
+          if (errEl) errEl.textContent = "Passwords do not match.";
+          return;
+        }
+
+        afcBusy(signupBtn, true, "Creating account...");
+        try {
+          var result = await afcSignUp(name, email, pass);
+          location.href = "onboarding.html";
+        } catch (err) {
+          afcBusy(signupBtn, false);
+          if (errEl) errEl.textContent = afcFriendlyAuthError(err);
+        }
+      });
+    }
+
+    /* Enter key submits */
+    [nameInput, emailInput, passInput, confirmInput].forEach(function (el) {
+      if (el) el.addEventListener("keydown", function (e) {
+        if (e.key === "Enter") { e.preventDefault(); if (signupBtn) signupBtn.click(); }
+      });
+    });
+
+    /* Google sign-in */
+    afcBindGoogle("#googleBtn");
+  })();
+  </script>
+</body>
+</html>

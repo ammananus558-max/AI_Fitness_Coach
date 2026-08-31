@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dashboard · Admin · AI FITNESS COACH</title>
+<script src="../js/theme.js"></script>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+<link href="../css/style.css" rel="stylesheet"><link href="../css/admin.css" rel="stylesheet">
+<link href="../css/animations.css" rel="stylesheet"><link href="../css/responsive.css" rel="stylesheet">
+</head>
+<body>
+<div class="admin-shell"><aside id="sidebarMount"></aside>
+<div class="admin-body"><header id="headerMount"></header><main class="admin-main" id="mainContent">
+  <div id="statsGrid" class="row g-3 mb-4"></div>
+  <h5 class="fw-bold mb-3">Quick Links</h5>
+  <div class="row g-2 mb-4" id="quickLinks"></div>
+  <h5 class="fw-bold mb-3">Recent Users</h5>
+  <div class="tile admin-table-card" id="recentUsersWrap"></div>
+</main></div></div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="../js/firebase-config.js"></script><script src="../js/utils.js"></script>
+<script src="../js/firebase-auth.js"></script><script src="../js/firebase-db.js"></script>
+<script src="../js/firebase-storage.js"></script><script src="../js/app.js"></script>
+<script src="../js/admin-auth.js"></script><script src="../js/admin.js"></script>
+<script>
+(async function () {
+  try { await requireAdmin(); } catch (e) { return; }
+  afcMountLayout("dashboard", { admin: true });
+
+  var stats = [
+    { id: "statUsers", icon: "people-fill", label: "Total Users", color: "text-primary" },
+    { id: "statActive", icon: "activity", label: "Active (7d)", color: "text-success" },
+    { id: "statExercises", icon: "list-check", label: "Exercises", color: "text-info" },
+    { id: "statWorkouts", icon: "lightning-fill", label: "Workouts", color: "text-warning" },
+    { id: "statMeals", icon: "egg-fried", label: "Meals", color: "text-danger" },
+    { id: "statPlans", icon: "tags-fill", label: "Pricing Plans", color: "text-secondary" },
+    { id: "statSubs", icon: "gem", label: "Active Subs", color: "text-primary" }
+  ];
+
+  document.getElementById("statsGrid").innerHTML = stats.map(function (s) {
+    return '<div class="col-6 col-md-4 col-xl-3"><div class="tile admin-stat">' +
+      '<div class="stat-icon rounded-circle d-flex align-items-center justify-content-center ' + s.color + '">' +
+      '<i class="bi bi-' + s.icon + '"></i></div>' +
+      '<div><div class="fs-3 fw-bold" id="' + s.id + '">0</div><div class="text-muted-2 small">' + s.label + '</div></div>' +
+      '</div></div>';
+  }).join("");
+
+  /* Quick links */
+  document.getElementById("quickLinks").innerHTML = AFC_ADMIN_NAV.filter(function (n) { return n.key !== "dashboard"; }).map(function (n) {
+    return '<div class="col-6 col-md-3 col-lg-2"><a href="' + n.href + '" class="tile d-flex align-items-center gap-2 text-decoration-none p-3">' +
+      '<i class="bi bi-' + n.icon + ' fs-5"></i><span class="fw-semibold">' + n.label + '</span></a></div>';
+  }).join("");
+
+  /* Load counts */
+  afcLoader("Loading dashboard...");
+  try {
+    var users = await afcDbGet("users") || {};
+    var exercises = await afcDbGet("exercises") || {};
+    var workouts = await afcDbGet("workouts") || {};
+    var meals = await afcDbGet("meals") || {};
+    var pricing = await afcDbGet("pricing") || {};
+
+    var userKeys = Object.keys(users);
+    var totalUsers = userKeys.length;
+    var sevenDaysAgo = Date.now() - 7 * 86400000;
+    var activeCount = 0;
+    var activeSubs = 0;
+    var recentList = [];
+
+    userKeys.forEach(function (uid) {
+      var u = users[uid];
+      if (!u) return;
+      if (u.lastLogin && u.lastLogin >= sevenDaysAgo) activeCount++;
+      if (u.subscription && u.subscription.status === "active") activeSubs++;
+      recentList.push({ uid: uid, name: u.name || "", email: u.email || "", createdAt: u.createdAt || 0 });
+    });
+
+    recentList.sort(function (a, b) { return b.createdAt - a.createdAt; });
+
+    afcAnimateCount(document.getElementById("statUsers"), totalUsers);
+    afcAnimateCount(document.getElementById("statActive"), activeCount);
+    afcAnimateCount(document.getElementById("statExercises"), Object.keys(exercises).length);
+    afcAnimateCount(document.getElementById("statWorkouts"), Object.keys(workouts).length);
+    afcAnimateCount(document.getElementById("statMeals"), Object.keys(meals).length);
+    afcAnimateCount(document.getElementById("statPlans"), Object.keys(pricing).length);
+    afcAnimateCount(document.getElementById("statSubs"), activeSubs);
+
+    /* Recent users table */
+    var recent = recentList.slice(0, 5);
+    var html = afcAdminTable({
+      columns: [
+        { key: "name", label: "Name" },
+        { key: "email", label: "Email" },
+        { key: "createdAt", label: "Joined", render: function (row) {
+          return row.createdAt ? afcFmtDateTime(row.createdAt) : "—";
+        }}
+      ],
+      rows: recent.map(function (r) { return [r.uid, r]; })
+    });
+    document.getElementById("recentUsersWrap").innerHTML = html;
+  } catch (err) {
+    afcToast("Failed to load dashboard data.", "error");
+  }
+  afcLoaderOff();
+})();
+</script>
+</body>
+</html>

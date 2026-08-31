@@ -1,0 +1,58 @@
+{
+  "rules": {
+    "users": {
+      "$uid": {
+        ".read": "auth != null && (auth.uid === $uid || root.child('admins').child(auth.uid).child('role').val() === 'admin')",
+        ".write": "auth != null && (auth.uid === $uid || root.child('admins').child(auth.uid).child('role').val() === 'admin')"
+      }
+    },
+
+    "exercises": {
+      ".read": true,
+      ".write": "auth != null && root.child('admins').child(auth.uid).child('role').val() === 'admin'"
+    },
+    "workouts": {
+      ".read": true,
+      ".write": "auth != null && root.child('admins').child(auth.uid).child('role').val() === 'admin'"
+    },
+    "dietPlans": {
+      ".read": true,
+      ".write": "auth != null && root.child('admins').child(auth.uid).child('role').val() === 'admin'"
+    },
+    "meals": {
+      ".read": true,
+      ".write": "auth != null && root.child('admins').child(auth.uid).child('role').val() === 'admin'"
+    },
+    "weeklyPlans": {
+      ".read": true,
+      ".write": "auth != null && root.child('admins').child(auth.uid).child('role').val() === 'admin'"
+    },
+    "goals": {
+      ".read": true,
+      ".write": "auth != null && root.child('admins').child(auth.uid).child('role').val() === 'admin'"
+    },
+    "pricing": {
+      ".read": true,
+      ".write": "auth != null && root.child('admins').child(auth.uid).child('role').val() === 'admin'"
+    },
+    "chatbot": {
+      ".read": true,
+      ".write": "auth != null && root.child('admins').child(auth.uid).child('role').val() === 'admin'"
+    },
+    "settings": {
+      ".read": true,
+      ".write": "auth != null && root.child('admins').child(auth.uid).child('role').val() === 'admin'"
+    },
+    "adminGallery": {
+      ".read": true,
+      ".write": "auth != null && root.child('admins').child(auth.uid).child('role').val() === 'admin'"
+    },
+
+    "admins": {
+      ".read": "auth != null",
+      "$uid": {
+        ".write": "auth != null && (auth.uid === $uid || root.child('admins').child(auth.uid).child('role').val() === 'admin')"
+      }
+    }
+  }
+}

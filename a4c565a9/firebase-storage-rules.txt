@@ -1,0 +1,59 @@
+rules_version = '2';
+
+// ============================================================
+// AI FITNESS COACH — Firebase Storage rules
+// Deploy: Firebase console -> Storage -> Rules -> paste -> Publish
+//
+// - Users may read/write only their own uploads (max 5 MB, images only).
+// - Shared content (exercises, meals, admin-gallery) is publicly readable.
+// - Writes to shared content require sign-in. Admin enforcement happens
+//   in the app (admins/{uid} check) and in the Realtime Database rules;
+//   Storage rules cannot read the Realtime Database directly. For strict
+//   production security, mirror an "admins" document into Cloud Firestore
+//   and check it here with firestore.get(...), or use Custom Claims.
+// ============================================================
+
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function isImage() {
+      return request.resource.contentType.matches('image/.*');
+    }
+
+    function underFiveMB() {
+      return request.resource.size < 5 * 1024 * 1024;
+    }
+
+    // Private user uploads: profile photo + before/after progress photos.
+    match /users/{uid}/{allPaths=**} {
+      allow read: if signedIn() && request.auth.uid == uid;
+      allow write: if signedIn() && request.auth.uid == uid
+                   && isImage() && underFiveMB();
+    }
+
+    // Admin-managed shared media.
+    match /exercises/{allPaths=**} {
+      allow read: if true;
+      allow write: if signedIn() && isImage();
+    }
+
+    match /meals/{allPaths=**} {
+      allow read: if true;
+      allow write: if signedIn() && isImage();
+    }
+
+    match /admin-gallery/{allPaths=**} {
+      allow read: if true;
+      allow write: if signedIn() && isImage() && underFiveMB();
+    }
+
+    // Everything else: locked.
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

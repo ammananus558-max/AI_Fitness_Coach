@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Dashboard · AI FITNESS COACH</title>
+  <script src="js/theme.js"></script>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+  <link href="css/style.css" rel="stylesheet"><link href="css/animations.css" rel="stylesheet"><link href="css/responsive.css" rel="stylesheet">
+</head>
+<body>
+  <div class="app-shell"><aside id="sidebarMount"></aside>
+    <div class="app-body"><header id="headerMount"></header>
+      <main class="app-main" id="mainContent">
+
+        <!-- Page head -->
+        <div class="page-head reveal" id="dashHead"></div>
+
+        <!-- Stats row -->
+        <div class="row g-3 mb-4 reveal" id="statsRow">
+          <div class="col-6 col-md-4 col-xl"><div class="tile stat-card"><div class="stat-icon fire"><i class="bi bi-fire" aria-hidden="true"></i></div><div><div class="stat-value" id="statStreak">0</div><div class="stat-label">STREAK DAYS</div></div></div></div>
+          <div class="col-6 col-md-4 col-xl"><div class="tile stat-card"><div class="stat-icon blue"><i class="bi bi-droplet-fill" aria-hidden="true"></i></div><div><div class="stat-value" id="statWater">0/8</div><div class="stat-label">WATER GLASSES</div></div></div></div>
+          <div class="col-6 col-md-4 col-xl"><div class="tile stat-card"><div class="stat-icon green"><i class="bi bi-egg-fried" aria-hidden="true"></i></div><div><div class="stat-value" id="statMeals">0/4</div><div class="stat-label">MEALS LOGGED</div></div></div></div>
+          <div class="col-6 col-md-4 col-xl"><div class="tile stat-card"><div class="stat-icon amber"><i class="bi bi-lightning-fill" aria-hidden="true"></i></div><div><div class="stat-value" id="statWorkout">PENDING</div><div class="stat-label">WORKOUT</div></div></div></div>
+          <div class="col-12 col-md-4 col-xl"><div class="tile stat-card"><div class="stat-icon fire"><i class="bi bi-fire" aria-hidden="true"></i></div><div><div class="stat-value" id="statCalories">0</div><div class="stat-label">CALORIES</div></div></div></div>
+        </div>
+
+        <!-- Today's workout -->
+        <div class="tile tile-pad mb-4 reveal" id="todayWorkoutCard">
+          <div class="d-flex justify-content-between align-items-center mb-3">
+            <h2 class="section-title mb-0"><i class="bi bi-lightning-fill" aria-hidden="true"></i>TODAY'S WORKOUT</h2>
+            <a href="weekly-plan.html" class="btn btn-ghost btn-sm">WEEKLY PLAN</a>
+          </div>
+          <div id="todayWorkoutBody"><div class="empty-state"><i class="bi bi-hourglass-split" aria-hidden="true"></i><p>Loading...</p></div></div>
+        </div>
+
+        <!-- Today's meals -->
+        <div class="tile tile-pad mb-4 reveal" id="todayMealsCard">
+          <h2 class="section-title"><i class="bi bi-egg-fried" aria-hidden="true"></i>TODAY'S MEALS</h2>
+          <div id="todayMealsBody"><div class="empty-state"><i class="bi bi-hourglass-split" aria-hidden="true"></i><p>Loading...</p></div></div>
+        </div>
+
+        <!-- Daily habits -->
+        <div class="tile tile-pad mb-4 reveal">
+          <h2 class="section-title"><i class="bi bi-check2-circle" aria-hidden="true"></i>DAILY HABITS</h2>
+          <div id="habitsBody"></div>
+        </div>
+
+        <!-- Trial status -->
+        <div class="tile tile-pad mb-4 reveal" id="trialCard">
+          <h2 class="section-title"><i class="bi bi-gem" aria-hidden="true"></i>SUBSCRIPTION</h2>
+          <div id="trialBody"><div class="empty-state"><i class="bi bi-hourglass-split" aria-hidden="true"></i><p>Loading...</p></div></div>
+        </div>
+
+        <!-- Quick links -->
+        <div class="row g-3 reveal">
+          <div class="col-6"><a href="weekly-plan.html" class="tile tile-pad tile-hover d-block text-center text-decoration-none"><i class="bi bi-calendar-week fs-3 d-block mb-2" style="color:var(--primary)"></i><strong>Weekly Plan</strong></a></div>
+          <div class="col-6"><a href="progress.html" class="tile tile-pad tile-hover d-block text-center text-decoration-none"><i class="bi bi-graph-up fs-3 d-block mb-2" style="color:var(--primary)"></i><strong>Progress</strong></a></div>
+        </div>
+
+      </main>
+    </div>
+  </div>
+  <nav id="bottomNavMount"></nav>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="js/firebase-config.js"></script><script src="js/utils.js"></script>
+  <script src="js/firebase-auth.js"></script><script src="js/firebase-db.js"></script>
+  <script src="js/firebase-storage.js"></script><script src="js/app.js"></script>
+  <script src="js/streak.js"></script><script src="js/chatbot.js"></script>
+  <script src="js/dashboard.js"></script>
+</body>
+</html>

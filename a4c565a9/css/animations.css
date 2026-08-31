@@ -1,0 +1,77 @@
+/* ============================================================
+   AI FITNESS COACH — ANIMATIONS
+   CSS keyframes + utility animation classes
+   ============================================================ */
+
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes fadeUp { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+@keyframes fadeDown { from { opacity: 0; transform: translateY(-14px); } to { opacity: 1; transform: none; } }
+@keyframes scaleIn { from { opacity: 0; transform: scale(0.85); } to { opacity: 1; transform: scale(1); } }
+@keyframes slideInRight { from { opacity: 0; transform: translateX(40px); } to { opacity: 1; transform: none; } }
+@keyframes fadeOutRight { to { opacity: 0; transform: translateX(40px); } }
+@keyframes spin { to { transform: rotate(360deg); } }
+@keyframes pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.06); } }
+@keyframes floaty { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+@keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+@keyframes splashSlide {
+  0% { transform: translateX(-120%); }
+  60% { transform: translateX(180%); }
+  100% { transform: translateX(320%); }
+}
+@keyframes typingBlink { 0%, 80%, 100% { opacity: 0.25; transform: translateY(0); } 40% { opacity: 1; transform: translateY(-3px); } }
+@keyframes popCheck { 0% { transform: scale(0); } 70% { transform: scale(1.25); } 100% { transform: scale(1); } }
+@keyframes confettiFall {
+  0% { transform: translateY(-10vh) rotate(0deg); opacity: 1; }
+  100% { transform: translateY(105vh) rotate(720deg); opacity: 0; }
+}
+
+.anim-fade { animation: fadeIn 0.45s ease both; }
+.anim-fade-up { animation: fadeUp 0.5s ease both; }
+.anim-fade-down { animation: fadeDown 0.5s ease both; }
+.anim-scale { animation: scaleIn 0.4s cubic-bezier(0.2, 1.2, 0.4, 1) both; }
+.anim-float { animation: floaty 3.2s ease-in-out infinite; }
+.anim-pulse { animation: pulse 1.8s ease-in-out infinite; }
+
+/* Scroll reveal (add .reveal, JS toggles .revealed) */
+.reveal { opacity: 0; transform: translateY(22px); transition: opacity 0.6s ease, transform 0.6s cubic-bezier(0.2, 0.8, 0.2, 1); }
+.reveal.revealed { opacity: 1; transform: none; }
+
+/* Stagger children */
+.stagger > * { animation: fadeUp 0.55s ease both; }
+.stagger > *:nth-child(1) { animation-delay: 0.03s; }
+.stagger > *:nth-child(2) { animation-delay: 0.09s; }
+.stagger > *:nth-child(3) { animation-delay: 0.15s; }
+.stagger > *:nth-child(4) { animation-delay: 0.21s; }
+.stagger > *:nth-child(5) { animation-delay: 0.27s; }
+.stagger > *:nth-child(6) { animation-delay: 0.33s; }
+.stagger > *:nth-child(7) { animation-delay: 0.39s; }
+.stagger > *:nth-child(8) { animation-delay: 0.45s; }
+
+/* Splash pieces */
+.splash .brand-badge { animation: scaleIn 0.7s cubic-bezier(0.2, 1.4, 0.4, 1) both; }
+.splash h1 { animation: fadeUp 0.6s 0.25s ease both; }
+.splash p { animation: fadeUp 0.6s 0.4s ease both; }
+.splash-bar { animation: fadeIn 0.5s 0.55s ease both; }
+.splash .splash-float-icon { animation: floaty 2.8s ease-in-out infinite; }
+.splash.leaving { transition: opacity 0.5s ease; opacity: 0; }
+
+/* Confetti pieces (spawned by JS) */
+.confetti-piece {
+  position: fixed;
+  top: -4vh;
+  width: 10px; height: 14px;
+  border-radius: 3px;
+  z-index: 1500;
+  pointer-events: none;
+  animation: confettiFall linear forwards;
+}
+
+.habit-check.done i { animation: popCheck 0.35s cubic-bezier(0.2, 1.6, 0.4, 1); }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

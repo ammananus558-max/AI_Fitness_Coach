@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Before &amp; After · Admin · AI FITNESS COACH</title>
+<script src="../js/theme.js"></script>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+<link href="../css/style.css" rel="stylesheet"><link href="../css/admin.css" rel="stylesheet">
+<link href="../css/animations.css" rel="stylesheet"><link href="../css/responsive.css" rel="stylesheet">
+<style>
+  .gallery-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(280px,1fr)); gap:1rem; }
+  .upload-slots { display:grid; grid-template-columns:repeat(4,1fr); gap:0.4rem; margin-top:0.6rem; }
+  .upload-slot { font-size:0.7rem; padding:0.3rem; text-align:center; cursor:pointer; border:1px dashed var(--border); border-radius:var(--radius-sm,4px); }
+  .upload-slot:hover { background:var(--primary-soft); }
+  .slot-img { width:100%; height:50px; object-fit:cover; border-radius:4px; }
+</style>
+</head>
+<body>
+<div class="admin-shell"><aside id="sidebarMount"></aside>
+<div class="admin-body"><header id="headerMount"></header><main class="admin-main" id="mainContent">
+  <div class="admin-toolbar mb-3">
+    <button class="btn btn-fire" id="addBtn"><i class="bi bi-plus-lg me-1"></i>Add Gallery Entry</button>
+  </div>
+  <div class="gallery-grid" id="galleryGrid"></div>
+</main></div></div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="../js/firebase-config.js"></script><script src="../js/utils.js"></script>
+<script src="../js/firebase-auth.js"></script><script src="../js/firebase-db.js"></script>
+<script src="../js/firebase-storage.js"></script><script src="../js/app.js"></script>
+<script src="../js/admin-auth.js"></script><script src="../js/admin.js"></script>
+<script>
+(async function () {
+  try { await requireAdmin(); } catch (e) { return; }
+  afcMountLayout("before", { admin: true });
+
+  var allData = {};
+  var sides = ["front","back","left","right"];
+  var phases = ["Before","After"];
+
+  function slotKey(side, phase) {
+    /* e.g. frontBefore, backAfter */
+    return side + phase;
+  }
+
+  function renderGallery() {
+    var html = "";
+    Object.keys(allData).forEach(function (id) {
+      var entry = allData[id];
+      if (!entry) return;
+      var imgs = entry.images || {};
+      html += '<div class="tile p-3" data-id="' + afcEscape(id) + '">';
+      html += '<h6 class="fw-bold">' + afcEscape(entry.title || "Untitled") + '</h6>';
+      html += '<p class="small text-muted-2 mb-1">' + afcEscape(entry.description || "") + '</p>';
+      html += '<p class="small text-muted-2 mb-2">' + afcEscape(entry.date || "") + '</p>';
+      html += '<div class="upload-slots">';
+      sides.forEach(function (side) {
+        phases.forEach(function (phase) {
+          var sk = slotKey(side, phase);
+          var imgUrl = imgs[sk] || "";
+          html += '<div class="upload-slot" data-upload="' + afcEscape(sk) + '" data-entry="' + afcEscape(id) + '">';
+          if (imgUrl) {
+            html += '<img class="slot-img" src="' + afcEscape(imgUrl) + '" alt="' + side + ' ' + phase + '">';
+          } else {
+            html += '<i class="bi bi-cloud-upload d-block fs-5"></i>' + side + '<br>' + phase;
+          }
+          html += '</div>';
+        });
+      });
+      html += '</div>';
+      html += '<div class="row-actions mt-2">';
+      html += '<button class="btn btn-outline-primary btn-sm" data-action="PREVIEW" data-key="' + afcEscape(id) + '"><i class="bi bi-eye-fill"></i></button>';
+      html += '<button class="btn btn-outline-warning btn-sm" data-action="EDIT" data-key="' + afcEscape(id) + '"><i class="bi bi-pencil-square"></i></button>';
+      html += '<button class="btn btn-outline-danger btn-sm" data-action="DELETE" data-key="' + afcEscape(id) + '"><i class="bi bi-trash3-fill"></i></button>';
+      html += '</div></div>';
+    });
+    if (!html) html = '<div class="text-muted-2">No gallery entries yet.</div>';
+    document.getElementById("galleryGrid").innerHTML = html;
+
+    /* Bind upload slots */
+    document.querySelectorAll("[data-upload]").forEach(function (el) {
+      el.addEventListener("click", async function () {
+        var sk = el.dataset.upload;
+        var entryId = el.dataset.entry;
+        var file = await afcPickImage();
+        if (!file) return;
+        var err = afcValidateImage(file);
+        if (err) { afcToast(err, "error"); return; }
+        afcLoader("Uploading " + sk + "...");
+        try {
+          var url = await afcUpload("admin-gallery/" + entryId + "/" + sk + ".jpg", file, function (pct) {
+            /* progress available via pct 0-100 */
+          });
+          /* Save URL to adminGallery/{id}/images/{slotKey} */
+          var path = "adminGallery/" + entryId + "/images";
+          var update = {};
+          update[sk] = url;
+          await afcDbUpdate(path, update);
+          afcToast(sk + " uploaded.", "success");
+        } catch (e) { afcToast("Upload failed.", "error"); }
+        afcLoaderOff();
+      });
+    });
+  }
+
+  afcLoader("Loading gallery...");
+  try {
+    await afcDbOnValue("adminGallery", function (data) {
+      allData = data || {};
+      renderGallery();
+      afcLoaderOff();
+    });
+  } catch (err) { afcToast("Failed to load gallery.", "error"); afcLoaderOff(); }
+
+  document.getElementById("addBtn").addEventListener("click", async function () {
+    var data = await afcFormModal({
+      title: "Add Gallery Entry",
+      fields: [
+        { key: "title", label: "Title", type: "text", value: "" },
+        { key: "description", label: "Description", textarea: true, rows: 2, value: "" },
+        { key: "date", label: "Date", type: "text", value: afcTodayKey(), placeholder: "YYYY-MM-DD" }
+      ],
+      okText: "Create"
+    });
+    if (!data) return;
+    afcLoader("Creating entry...");
+    try {
+      var id = await afcDbPush("adminGallery", {
+        title: data.title, description: data.description, date: data.date,
+        images: {}
+      });
+      afcToast("Entry created. Upload images below.", "success");
+    } catch (err) { afcToast("Failed to create.", "error"); }
+    afcLoaderOff();
+  });
+
+  afcAdminBindActions(document.getElementById("galleryGrid"), {
+    PREVIEW: function (key) {
+      var entry = allData[key]; if (!entry) return;
+      var imgs = entry.images || {};
+      var body = '<div class="row g-2">';
+      sides.forEach(function (side) {
+        phases.forEach(function (phase) {
+          var sk = slotKey(side, phase);
+          var url = imgs[sk] || "";
+          body += '<div class="col-3 text-center"><small class="d-block text-muted-2 mb-1">' + side + ' ' + phase + '</small>';
+          body += url ? '<img src="' + afcEscape(url) + '" class="img-fluid rounded" style="max-height:120px">' : '<span class="text-muted-2">—</span>';
+          body += '</div>';
+        });
+      });
+      body += '</div>';
+      afcConfirm({ title: entry.title || "Preview", body: body, okText: "Close" });
+    },
+    EDIT: async function (key) {
+      var entry = allData[key]; if (!entry) return;
+      var data = await afcFormModal({
+        title: "Edit Entry",
+        fields: [
+          { key: "title", label: "Title", type: "text", value: entry.title || "" },
+          { key: "description", label: "Description", textarea: true, rows: 2, value: entry.description || "" },
+          { key: "date", label: "Date", type: "text", value: entry.date || "" }
+        ],
+        okText: "Save"
+      });
+      if (!data) return;
+      afcLoader("Saving...");
+      try {
+        await afcDbUpdate("adminGallery/" + key, { title: data.title, description: data.description, date: data.date });
+        afcToast("Updated.", "success");
+      } catch (err) { afcToast("Failed.", "error"); }
+      afcLoaderOff();
+    },
+    DELETE: async function (key) {
+      var ok = await afcConfirmDelete("gallery entry");
+      if (!ok) return;
+      afcLoader("Deleting...");
+      try { await afcDbRemove("adminGallery/" + key); afcToast("Deleted.", "success"); }
+      catch (err) { afcToast("Failed.", "error"); }
+      afcLoaderOff();
+    }
+  });
+})();
+</script>
+</body>
+</html>

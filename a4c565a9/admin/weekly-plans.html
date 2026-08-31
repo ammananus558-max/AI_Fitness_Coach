@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Weekly Plans · Admin · AI FITNESS COACH</title>
+<script src="../js/theme.js"></script>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+<link href="../css/style.css" rel="stylesheet"><link href="../css/admin.css" rel="stylesheet">
+<link href="../css/animations.css" rel="stylesheet"><link href="../css/responsive.css" rel="stylesheet">
+<style>
+  .week-tabs { display:flex; gap:0.5rem; margin-bottom:1rem; flex-wrap:wrap; }
+  .planner-scroll { display:flex; gap:1rem; overflow-x:auto; padding-bottom:1rem; }
+</style>
+</head>
+<body>
+<div class="admin-shell"><aside id="sidebarMount"></aside>
+<div class="admin-body"><header id="headerMount"></header><main class="admin-main" id="mainContent">
+  <div class="week-tabs" id="weekTabs"></div>
+  <div class="planner-scroll" id="plannerGrid"></div>
+</main></div></div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="../js/firebase-config.js"></script><script src="../js/utils.js"></script>
+<script src="../js/firebase-auth.js"></script><script src="../js/firebase-db.js"></script>
+<script src="../js/firebase-storage.js"></script><script src="../js/app.js"></script>
+<script src="../js/admin-auth.js"></script><script src="../js/admin.js"></script>
+<script>
+(async function () {
+  try { await requireAdmin(); } catch (e) { return; }
+  afcMountLayout("weekly", { admin: true });
+
+  var dayNames = ["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"];
+  var dayKeys = ["monday","tuesday","wednesday","thursday","friday","saturday","sunday"];
+  var activeWeek = "week1";
+  var allPlans = {};
+  var workoutsMap = {};
+  var mealsMap = {};
+
+  /* Load reference data */
+  afcLoader("Loading weekly plans...");
+  try {
+    workoutsMap = await afcDbGet("workouts") || {};
+    mealsMap = await afcDbGet("meals") || {};
+
+    await afcDbOnValue("weeklyPlans", function (data) {
+      allPlans = data || {};
+      renderTabs();
+      renderPlanner();
+      afcLoaderOff();
+    });
+  } catch (err) { afcToast("Failed to load plans.", "error"); afcLoaderOff(); }
+
+  function renderTabs() {
+    var html = "";
+    for (var i = 1; i <= 4; i++) {
+      var wk = "week" + i;
+      html += '<button class="btn ' + (wk === activeWeek ? "btn-fire" : "btn-outline-secondary") + '" data-week="' + wk + '">Week ' + i + '</button>';
+    }
+    document.getElementById("weekTabs").innerHTML = html;
+    document.getElementById("weekTabs").addEventListener("click", function (e) {
+      var btn = e.target.closest("[data-week]");
+      if (!btn) return;
+      activeWeek = btn.dataset.week;
+      renderTabs();
+      renderPlanner();
+    });
+  }
+
+  function mealName(key) {
+    if (!key) return "—";
+    var m = mealsMap[key];
+    return m ? m.name : key;
+  }
+
+  function workoutName(day) {
+    if (!day || !day.workout) return "Rest Day";
+    var w = workoutsMap[day.workout.key];
+    return w ? w.name : (day.workout.key || "—");
+  }
+
+  function renderPlanner() {
+    var week = allPlans[activeWeek] || {};
+    var html = "";
+    dayKeys.forEach(function (dk, idx) {
+      var day = week[dk] || {};
+      var isRest = day.restDay === true;
+      html += '<div class="planner-day tile' + (isRest ? " rest" : "") + '" data-day="' + dk + '">';
+      html += '<div class="planner-head">';
+      html += '<span>' + dayNames[idx] + (isRest ? ' <i class="bi bi-moon-stars-fill text-muted-2 small"></i>' : '') + '</span>';
+      html += '<div class="row-actions">';
+      html += '<button class="btn btn-outline-warning btn-sm" data-action="EDIT" data-key="' + dk + '" title="Edit"><i class="bi bi-pencil-square"></i></button>';
+      if (idx < 6) {
+        html += '<button class="btn btn-outline-info btn-sm" data-action="DUPLICATE" data-key="' + dk + '" title="Copy to next day"><i class="bi bi-copy"></i></button>';
+      }
+      html += '<button class="btn btn-outline-danger btn-sm" data-action="DELETE" data-key="' + dk + '" title="Delete"><i class="bi bi-trash3-fill"></i></button>';
+      html += '</div></div>';
+      html += '<div class="p-3">';
+      if (isRest) {
+        html += '<div class="text-muted-2 small mb-2"><i class="bi bi-moon-stars-fill me-1"></i>Rest Day</div>';
+      } else {
+        html += '<div class="fw-bold mb-2"><i class="bi bi-lightning-fill text-warning me-1"></i>' + afcEscape(workoutName(day)) + '</div>';
+        if (day.workout && day.workout.exercises && day.workout.exercises.length) {
+          html += '<div class="small text-muted-2 mb-2">' + afcEscape(day.workout.exercises.join(", ")) + '</div>';
+        }
+      }
+      if (day.diet) {
+        html += '<div class="planner-meal-line"><b>Breakfast</b><span>' + afcEscape(mealName(day.diet.breakfast)) + '</span></div>';
+        html += '<div class="planner-meal-line"><b>Lunch</b><span>' + afcEscape(mealName(day.diet.lunch)) + '</span></div>';
+        html += '<div class="planner-meal-line"><b>Snack</b><span>' + afcEscape(mealName(day.diet.snack)) + '</span></div>';
+        html += '<div class="planner-meal-line"><b>Dinner</b><span>' + afcEscape(mealName(day.diet.dinner)) + '</span></div>';
+      }
+      if (day.notes) {
+        html += '<div class="small text-muted-2 mt-2 fst-italic">' + afcEscape(day.notes) + '</div>';
+      }
+      html += '</div></div>';
+    });
+
+    /* Add missing days button */
+    html += '<div class="d-flex align-items-center justify-content-center" style="min-width:120px">' +
+      '<button class="btn btn-outline-primary" id="addMissingBtn"><i class="bi bi-plus-lg"></i> Add Missing</button></div>';
+
+    document.getElementById("plannerGrid").innerHTML = html;
+
+    /* Bind add missing */
+    var addBtn = document.getElementById("addMissingBtn");
+    if (addBtn) {
+      addBtn.addEventListener("click", async function () {
+        var week = allPlans[activeWeek] || {};
+        var added = false;
+        afcLoader("Adding missing days...");
+        for (var i = 0; i < dayKeys.length; i++) {
+          if (!week[dayKeys[i]]) {
+            await afcDbSet("weeklyPlans/" + activeWeek + "/" + dayKeys[i], {
+              restDay: false, notes: "", workout: null,
+              diet: { breakfast: "", lunch: "", snack: "", dinner: "" }
+            });
+            added = true;
+          }
+        }
+        if (!added) afcToast("All days already exist.", "info");
+        else afcToast("Missing days added.", "success");
+        afcLoaderOff();
+      });
+    }
+
+    /* Bind actions via delegation */
+    afcAdminBindActions(document.getElementById("plannerGrid"), {
+      EDIT: function (dayKey) { openEditDay(dayKey); },
+      DUPLICATE: function (dayKey) { duplicateDay(dayKey); },
+      DELETE: function (dayKey) { deleteDay(dayKey); }
+    });
+  }
+
+  function getMealOptions(category) {
+    var opts = [{ value: "", label: "None" }];
+    Object.keys(mealsMap).forEach(function (k) {
+      if (mealsMap[k].category === category) {
+        opts.push({ value: k, label: mealsMap[k].name });
+      }
+    });
+    return opts;
+  }
+
+  function getWorkoutOptions() {
+    var opts = [{ value: "", label: "None (Rest)" }];
+    Object.keys(workoutsMap).forEach(function (k) {
+      opts.push({ value: k, label: workoutsMap[k].name });
+    });
+    return opts;
+  }
+
+  async function openEditDay(dayKey) {
+    var week = allPlans[activeWeek] || {};
+    var day = week[dayKey] || {};
+    var currentWorkout = day.workout ? (day.workout.key || "") : "";
+
+    var data = await afcFormModal({
+      title: "Edit " + dayKey.charAt(0).toUpperCase() + dayKey.slice(1),
+      fields: [
+        { key: "restDay", label: "Rest Day", type: "select", options: [{ value: "no", label: "No" }, { value: "yes", label: "Yes" }], value: day.restDay ? "yes" : "no" },
+        { key: "workout", label: "Workout", type: "select", options: getWorkoutOptions(), value: currentWorkout },
+        { key: "breakfast", label: "Breakfast", type: "select", options: getMealOptions("breakfast"), value: (day.diet && day.diet.breakfast) || "" },
+        { key: "lunch", label: "Lunch", type: "select", options: getMealOptions("lunch"), value: (day.diet && day.diet.lunch) || "" },
+        { key: "snack", label: "Snack", type: "select", options: getMealOptions("snack"), value: (day.diet && day.diet.snack) || "" },
+        { key: "dinner", label: "Dinner", type: "select", options: getMealOptions("dinner"), value: (day.diet && day.diet.dinner) || "" },
+        { key: "notes", label: "Notes", textarea: true, rows: 2, value: day.notes || "" }
+      ],
+      okText: "Save"
+    });
+    if (!data) return;
+
+    var isRest = data.restDay === "yes";
+    var rec = {
+      restDay: isRest,
+      notes: data.notes,
+      workout: isRest || !data.workout ? null : { key: data.workout, exercises: (workoutsMap[data.workout] && workoutsMap[data.workout].exercises) || [] },
+      diet: { breakfast: data.breakfast, lunch: data.lunch, snack: data.snack, dinner: data.dinner }
+    };
+
+    afcLoader("Saving...");
+    try {
+      await afcDbSet("weeklyPlans/" + activeWeek + "/" + dayKey, rec);
+      afcToast("Day saved.", "success");
+    } catch (err) { afcToast("Failed to save.", "error"); }
+    afcLoaderOff();
+  }
+
+  async function duplicateDay(dayKey) {
+    var idx = dayKeys.indexOf(dayKey);
+    if (idx < 0 || idx >= 6) return;
+    var nextKey = dayKeys[idx + 1];
+    var week = allPlans[activeWeek] || {};
+    var day = week[dayKey];
+    if (!day) { afcToast("Source day not found.", "error"); return; }
+    afcLoader("Copying...");
+    try {
+      await afcDbSet("weeklyPlans/" + activeWeek + "/" + nextKey, JSON.parse(JSON.stringify(day)));
+      afcToast("Copied to " + nextKey + ".", "success");
+    } catch (err) { afcToast("Failed to copy.", "error"); }
+    afcLoaderOff();
+  }
+
+  async function deleteDay(dayKey) {
+    var ok = await afcConfirmDelete(dayKey + " plan");
+    if (!ok) return;
+    afcLoader("Deleting...");
+    try {
+      await afcDbRemove("weeklyPlans/" + activeWeek + "/" + dayKey);
+      afcToast("Day removed.", "success");
+    } catch (err) { afcToast("Failed to delete.", "error"); }
+    afcLoaderOff();
+  }
+})();
+</script>
+</body>
+</html>

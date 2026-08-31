@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Goals · Admin · AI FITNESS COACH</title>
+<script src="../js/theme.js"></script>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+<link href="../css/style.css" rel="stylesheet"><link href="../css/admin.css" rel="stylesheet">
+<link href="../css/animations.css" rel="stylesheet"><link href="../css/responsive.css" rel="stylesheet">
+</head>
+<body>
+<div class="admin-shell"><aside id="sidebarMount"></aside>
+<div class="admin-body"><header id="headerMount"></header><main class="admin-main" id="mainContent">
+  <div class="admin-toolbar">
+    <input type="text" class="form-control search-box" id="searchInput" placeholder="Search goals...">
+    <button class="btn btn-fire" id="addBtn"><i class="bi bi-plus-lg me-1"></i>Add Goal</button>
+  </div>
+  <div class="tile admin-table-card" id="tableWrap"></div>
+</main></div></div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="../js/firebase-config.js"></script><script src="../js/utils.js"></script>
+<script src="../js/firebase-auth.js"></script><script src="../js/firebase-db.js"></script>
+<script src="../js/firebase-storage.js"></script><script src="../js/app.js"></script>
+<script src="../js/admin-auth.js"></script><script src="../js/admin.js"></script>
+<script>
+(async function () {
+  try { await requireAdmin(); } catch (e) { return; }
+  afcMountLayout("goals", { admin: true });
+
+  var allData = {};
+  var levels = ["Beginner","Intermediate","Advanced"];
+
+  function goalFields(g) {
+    g = g || {};
+    return [
+      { key: "key", label: "Key (slug)", type: "text", value: g.key || "", placeholder: "lose-weight" },
+      { key: "title", label: "Title", type: "text", value: g.title || "" },
+      { key: "icon", label: "Icon (Bootstrap class)", type: "text", value: g.icon || "", placeholder: "bi-fire" },
+      { key: "description", label: "Description", textarea: true, rows: 2, value: g.description || "" },
+      { key: "level", label: "Recommended Level", type: "select", options: levels, value: g.level || "" },
+      { key: "workout", label: "Linked Workout Key", type: "text", value: g.workout || "", placeholder: "workouts/fat-burn-basics" },
+      { key: "diet", label: "Linked Diet Plan Key", type: "text", value: g.diet || "", placeholder: "dietPlans/balanced-deficit" }
+    ];
+  }
+
+  function renderTable() {
+    var html = afcAdminTable({
+      columns: [
+        { key: "_icon", label: "", render: function (row) { return '<i class="bi ' + afcEscape(row.icon || "") + ' fs-5"></i>'; } },
+        { key: "key", label: "Key" },
+        { key: "title", label: "Title" },
+        { key: "level", label: "Level" },
+        { key: "_active", label: "Active", render: function (row) {
+          return row.active !== false ? '<span class="badge bg-success">Yes</span>' : '<span class="badge bg-secondary">No</span>';
+        }}
+      ],
+      rows: allData,
+      actions: [
+        { icon: "pencil-square", title: "EDIT", cls: "btn-outline-warning" },
+        { icon: "power", title: "TOGGLE_ACTIVE", cls: "btn-outline-secondary" },
+        { icon: "trash3-fill", title: "DELETE", cls: "btn-outline-danger" }
+      ]
+    });
+    document.getElementById("tableWrap").innerHTML = html;
+    afcAdminSearchFilter("#searchInput", "#tableWrap tr[data-key]");
+  }
+
+  afcLoader("Loading goals...");
+  try {
+    await afcDbOnValue("goals", function (data) {
+      allData = data || {};
+      renderTable();
+      afcLoaderOff();
+    });
+  } catch (err) { afcToast("Failed to load goals.", "error"); afcLoaderOff(); }
+
+  document.getElementById("addBtn").addEventListener("click", async function () {
+    var data = await afcFormModal({ title: "Add Goal", fields: goalFields(), okText: "Save" });
+    if (!data) return;
+    var slug = data.key || afcSlugify(data.title);
+    if (!slug) { afcToast("Enter a valid key.", "error"); return; }
+    afcLoader("Saving...");
+    try {
+      await afcDbSet("goals/" + slug, {
+        key: slug, title: data.title, icon: data.icon, description: data.description,
+        level: data.level, workout: data.workout, diet: data.diet, active: true
+      });
+      afcToast("Goal saved.", "success");
+    } catch (err) { afcToast("Failed to save.", "error"); }
+    afcLoaderOff();
+  });
+
+  afcAdminBindActions(document.getElementById("tableWrap"), {
+    EDIT: async function (key) {
+      var g = allData[key]; if (!g) return;
+      var data = await afcFormModal({ title: "Edit Goal", fields: goalFields(g), okText: "Save" });
+      if (!data) return;
+      afcLoader("Saving...");
+      try {
+        await afcDbUpdate("goals/" + key, {
+          key: data.key || key, title: data.title, icon: data.icon, description: data.description,
+          level: data.level, workout: data.workout, diet: data.diet
+        });
+        afcToast("Goal updated.", "success");
+      } catch (err) { afcToast("Failed to update.", "error"); }
+      afcLoaderOff();
+    },
+    TOGGLE_ACTIVE: async function (key) {
+      afcLoader("Toggling...");
+      try {
+        var v = await afcToggleField("goals/" + key, "active");
+        afcToast(v ? "Activated." : "Deactivated.", "success");
+      } catch (err) { afcToast("Failed.", "error"); }
+      afcLoaderOff();
+    },
+    DELETE: async function (key) {
+      var ok = await afcConfirmDelete("goal " + key);
+      if (!ok) return;
+      afcLoader("Deleting...");
+      try { await afcDbRemove("goals/" + key); afcToast("Deleted.", "success"); }
+      catch (err) { afcToast("Failed to delete.", "error"); }
+      afcLoaderOff();
+    }
+  });
+})();
+</script>
+</body>
+</html>

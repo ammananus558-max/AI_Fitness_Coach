@@ -1,0 +1,76 @@
+/* ============================================================
+   AI FITNESS COACH — RESPONSIVE
+   Desktop / laptop / tablet / mobile adjustments
+   ============================================================ */
+
+/* Laptop / small desktop */
+@media (max-width: 1199.98px) {
+  :root { --sidebar-w: 232px; }
+  .feature-grid { grid-template-columns: repeat(2, 1fr); }
+}
+
+/* Tablet: collapsible sidebar */
+@media (max-width: 991.98px) {
+  .app-sidebar {
+    transform: translateX(-105%);
+    transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+    box-shadow: none;
+  }
+  .app-sidebar.open { transform: none; box-shadow: var(--shadow-lg); }
+  .app-body { margin-left: 0; }
+  .sidebar-backdrop {
+    position: fixed; inset: 0; z-index: 1035;
+    background: rgba(10, 12, 18, 0.5);
+    opacity: 0; pointer-events: none; transition: opacity 0.25s;
+  }
+  .sidebar-backdrop.open { opacity: 1; pointer-events: auto; }
+  #sidebarToggleBtn { display: grid !important; }
+  .feature-grid { grid-template-columns: repeat(2, 1fr); }
+}
+
+/* Mobile */
+@media (max-width: 767.98px) {
+  .bottom-nav { display: block; }
+  .app-main { padding: 1.1rem 1rem calc(var(--bottomnav-h) + 2.2rem); }
+  .app-header { padding: 0 1rem; }
+  .page-head h1 { font-size: 1.3rem; }
+  .feature-grid { grid-template-columns: 1fr; }
+  .hero { padding: 3.4rem 1.2rem 3rem; }
+  .auth-card { padding: 1.6rem; }
+  .more-grid { grid-template-columns: repeat(3, 1fr); }
+  .stat-card { padding: 0.9rem 1rem; }
+  .stat-value { font-size: 1.15rem; }
+  .player-timer { font-size: 2.6rem; }
+  .player-media { height: 200px; }
+  .toast-stack { right: 12px; left: 12px; max-width: none; }
+  .chat-panel { right: 12px; bottom: calc(var(--bottomnav-h) + 80px); }
+  .chat-fab { right: 14px; }
+  .table-responsive-2 { display: block; overflow-x: auto; }
+  .gauge-wrap { width: 200px; }
+  .landing-section { padding: 2.2rem 1.1rem; }
+  .price-band { padding: 1.8rem 1.3rem; border-radius: 18px; }
+}
+
+/* Very small phones */
+@media (max-width: 359.98px) {
+  .more-grid { grid-template-columns: repeat(2, 1fr); }
+  .bnav-item { font-size: 0.55rem; }
+}
+
+/* Desktop niceties */
+@media (min-width: 992px) {
+  #sidebarToggleBtn { display: none !important; }
+  .sidebar-backdrop { display: none; }
+  .app-main { padding-bottom: 2.5rem; }
+}
+
+/* Large desktop */
+@media (min-width: 1400px) {
+  .app-main { max-width: 1280px; }
+}
+
+/* Print */
+@media print {
+  .app-sidebar, .bottom-nav, .app-header, .chat-fab, .chat-panel, .toast-stack { display: none !important; }
+  .app-body { margin: 0; }
+}

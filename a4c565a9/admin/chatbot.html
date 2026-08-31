@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Chatbot · Admin · AI FITNESS COACH</title>
+<script src="../js/theme.js"></script>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+<link href="../css/style.css" rel="stylesheet"><link href="../css/admin.css" rel="stylesheet">
+<link href="../css/animations.css" rel="stylesheet"><link href="../css/responsive.css" rel="stylesheet">
+</head>
+<body>
+<div class="admin-shell"><aside id="sidebarMount"></aside>
+<div class="admin-body"><header id="headerMount"></header><main class="admin-main" id="mainContent">
+  <div class="alert alert-info small mb-3"><i class="bi bi-info-circle me-1"></i>These rules override the built-in answers in the user AI assistant.</div>
+  <div class="admin-toolbar">
+    <input type="text" class="form-control search-box" id="searchInput" placeholder="Search chatbot rules...">
+    <button class="btn btn-fire" id="addBtn"><i class="bi bi-plus-lg me-1"></i>Add Rule</button>
+  </div>
+  <div class="tile admin-table-card" id="tableWrap"></div>
+</main></div></div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="../js/firebase-config.js"></script><script src="../js/utils.js"></script>
+<script src="../js/firebase-auth.js"></script><script src="../js/firebase-db.js"></script>
+<script src="../js/firebase-storage.js"></script><script src="../js/app.js"></script>
+<script src="../js/admin-auth.js"></script><script src="../js/admin.js"></script>
+<script>
+(async function () {
+  try { await requireAdmin(); } catch (e) { return; }
+  afcMountLayout("chatbot", { admin: true });
+
+  var allData = {};
+  var categories = ["Workout Tips","Diet Tips","Water","Motivation","App Help"];
+
+  function chatFields(c) {
+    c = c || {};
+    return [
+      { key: "question", label: "Trigger Keywords", type: "text", value: c.question || "", placeholder: "e.g. warm up, protein" },
+      { key: "answer", label: "Answer", textarea: true, rows: 4, value: c.answer || "" },
+      { key: "category", label: "Category", type: "select", options: categories, value: c.category || "" }
+    ];
+  }
+
+  function catBadge(cat) {
+    var colors = { "Workout Tips": "bg-primary", "Diet Tips": "bg-success", "Water": "bg-info", "Motivation": "bg-warning text-dark", "App Help": "bg-secondary" };
+    return '<span class="badge ' + (colors[cat] || "bg-secondary") + '">' + afcEscape(cat || "General") + '</span>';
+  }
+
+  function renderTable() {
+    var html = afcAdminTable({
+      columns: [
+        { key: "question", label: "Trigger" },
+        { key: "answer", label: "Answer", render: function (row) {
+          var txt = row.answer || "";
+          return afcEscape(txt.length > 60 ? txt.substring(0, 60) + "..." : txt);
+        }},
+        { key: "_cat", label: "Category", render: function (row) { return catBadge(row.category); } }
+      ],
+      rows: allData,
+      actions: [
+        { icon: "pencil-square", title: "EDIT", cls: "btn-outline-warning" },
+        { icon: "trash3-fill", title: "DELETE", cls: "btn-outline-danger" }
+      ]
+    });
+    document.getElementById("tableWrap").innerHTML = html;
+    afcAdminSearchFilter("#searchInput", "#tableWrap tr[data-key]");
+  }
+
+  afcLoader("Loading chatbot rules...");
+  try {
+    await afcDbOnValue("chatbot", function (data) {
+      allData = data || {};
+      renderTable();
+      afcLoaderOff();
+    });
+  } catch (err) { afcToast("Failed to load chatbot rules.", "error"); afcLoaderOff(); }
+
+  document.getElementById("addBtn").addEventListener("click", async function () {
+    var data = await afcFormModal({ title: "Add Chatbot Rule", fields: chatFields(), okText: "Save" });
+    if (!data) return;
+    var slug = afcSlugify(data.question);
+    if (!slug) { afcToast("Enter trigger keywords.", "error"); return; }
+    afcLoader("Saving...");
+    try {
+      await afcDbSet("chatbot/" + slug, { question: data.question, answer: data.answer, category: data.category });
+      afcToast("Rule saved.", "success");
+    } catch (err) { afcToast("Failed to save.", "error"); }
+    afcLoaderOff();
+  });
+
+  afcAdminBindActions(document.getElementById("tableWrap"), {
+    EDIT: async function (key) {
+      var c = allData[key]; if (!c) return;
+      var data = await afcFormModal({ title: "Edit Rule", fields: chatFields(c), okText: "Save" });
+      if (!data) return;
+      afcLoader("Saving...");
+      try {
+        await afcDbUpdate("chatbot/" + key, { question: data.question, answer: data.answer, category: data.category });
+        afcToast("Rule updated.", "success");
+      } catch (err) { afcToast("Failed to update.", "error"); }
+      afcLoaderOff();
+    },
+    DELETE: async function (key) {
+      var ok = await afcConfirmDelete("chatbot rule " + key);
+      if (!ok) return;
+      afcLoader("Deleting...");
+      try { await afcDbRemove("chatbot/" + key); afcToast("Deleted.", "success"); }
+      catch (err) { afcToast("Failed to delete.", "error"); }
+      afcLoaderOff();
+    }
+  });
+})();
+</script>
+</body>
+</html>

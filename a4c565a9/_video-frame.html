@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Video Frame Extractor</title>
+</head>
+<body>
+  <video id="v" src="file:///C:/Users/S%20a%20k%20h%20i%20compuTER/Downloads/WhatsApp%20Video%202026-08-30%20at%2010.55.20%20PM.mp4" crossorigin="anonymous" style="display:none"></video>
+  <canvas id="c" style="display:none"></canvas>
+  <script>
+    window.extractFrame = function(time) {
+      return new Promise(function(resolve) {
+        var v = document.getElementById('v');
+        var c = document.getElementById('c');
+        v.currentTime = time;
+        v.addEventListener('seeked', function onSeeked() {
+          v.removeEventListener('seeked', onSeeked);
+          c.width = v.videoWidth;
+          c.height = v.videoHeight;
+          var ctx = c.getContext('2d');
+          ctx.drawImage(v, 0, 0, c.width, c.height);
+          resolve({
+            width: c.width,
+            height: c.height,
+            duration: v.duration,
+            dataUrl: c.toDataURL('image/jpeg', 0.7)
+          });
+        });
+      });
+    };
+  </script>
+</body>
+</html>
